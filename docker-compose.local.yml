@@ -1,0 +1,94 @@
+services:
+  # Local PostgreSQL for development
+  postgres-local:
+    image: postgres:16-alpine
+    container_name: myexpo-postgres-local
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-myexpo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-myexpo123}
+      POSTGRES_DB: ${POSTGRES_DB:-myexpo_dev}
+      POSTGRES_MULTIPLE_DATABASES: myexpo_dev,myexpo_preview,myexpo_test
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - local_postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-multiple-db.sh:/docker-entrypoint-initdb.d/init-multiple-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myexpo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - myexpo-local
+
+  # Local Redis
+  redis-local:
+    image: redis:7-alpine
+    container_name: myexpo-redis-local
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - local_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - myexpo-local
+
+  # pgAdmin for local DB management
+  pgadmin-local:
+    image: dpage/pgadmin4:latest
+    container_name: myexpo-pgadmin-local
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@local.dev}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    depends_on:
+      postgres-local:
+        condition: service_healthy
+    networks:
+      - myexpo-local
+    profiles:
+      - tools
+
+  # Local development API (optional)
+  api-local:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+      target: development
+    container_name: myexpo-api-local
+    environment:
+      NODE_ENV: development
+      APP_ENV: local
+      DATABASE_URL: postgresql://${POSTGRES_USER:-myexpo}:${POSTGRES_PASSWORD:-myexpo123}@postgres-local:5432/${POSTGRES_DB:-myexpo_dev}
+      REDIS_URL: redis://redis-local:6379
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-local-dev-secret}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:8081}
+    ports:
+      - "${API_PORT:-3000}:3000"
+    depends_on:
+      postgres-local:
+        condition: service_healthy
+      redis-local:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src
+      - ./lib:/app/lib
+      - ./drizzle:/app/drizzle
+      - ./.env.local:/app/.env
+    networks:
+      - myexpo-local
+    profiles:
+      - api
+
+networks:
+  myexpo-local:
+    driver: bridge
+
+volumes:
+  local_postgres_data:
+  local_redis_data:

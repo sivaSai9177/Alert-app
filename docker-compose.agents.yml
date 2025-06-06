@@ -1,0 +1,137 @@
+version: '3.8'
+
+services:
+  # Manager Agent - Orchestrates all other agents
+  manager-agent:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.agent
+      args:
+        AGENT_TYPE: manager
+    container_name: myexpo-manager-agent
+    environment:
+      AGENT_TYPE: manager
+      AGENT_NAME: "Manager Agent"
+      WORKSPACE_PATH: /workspace
+      DOCS_PATH: /workspace/docs
+      DATABASE_URL: postgresql://${POSTGRES_USER:-myexpo}:${POSTGRES_PASSWORD:-myexpo123}@postgres:5432/${POSTGRES_DB:-myexpo_dev}
+    volumes:
+      - .:/workspace
+      - agent-shared:/shared
+      - ./logs/manager:/logs
+    networks:
+      - myexpo-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["bun", "run", "agent:manager"]
+    profiles:
+      - agents
+
+  # Backend Developer Agent
+  backend-agent:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.agent
+      args:
+        AGENT_TYPE: backend
+    container_name: myexpo-backend-agent
+    environment:
+      AGENT_TYPE: backend
+      AGENT_NAME: "Backend Developer Agent"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-myexpo}:${POSTGRES_PASSWORD:-myexpo123}@postgres:5432/${POSTGRES_DB:-myexpo_dev}
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - .:/workspace
+      - agent-shared:/shared
+      - ./logs/backend:/logs
+    networks:
+      - myexpo-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["bun", "run", "agent:backend"]
+    profiles:
+      - agents
+
+  # Frontend Developer Agent
+  frontend-agent:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.agent
+      args:
+        AGENT_TYPE: frontend
+    container_name: myexpo-frontend-agent
+    environment:
+      AGENT_TYPE: frontend
+      AGENT_NAME: "Frontend Developer Agent"
+      EXPO_PUBLIC_API_URL: http://api:3000
+    volumes:
+      - .:/workspace
+      - agent-shared:/shared
+      - ./logs/frontend:/logs
+    networks:
+      - myexpo-network
+    command: ["bun", "run", "agent:frontend"]
+    profiles:
+      - agents
+
+  # Tester Agent
+  tester-agent:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.agent
+      args:
+        AGENT_TYPE: tester
+    container_name: myexpo-tester-agent
+    environment:
+      AGENT_TYPE: tester
+      AGENT_NAME: "Tester Agent"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-myexpo}:${POSTGRES_PASSWORD:-myexpo123}@postgres:5432/${POSTGRES_DB:-myexpo_test}
+      TEST_RESULTS_PATH: /results
+    volumes:
+      - .:/workspace
+      - agent-shared:/shared
+      - ./logs/tester:/logs
+      - ./test-results:/results
+    networks:
+      - myexpo-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["bun", "run", "agent:tester"]
+    profiles:
+      - agents
+
+  # Agent Communication Hub
+  agent-hub:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.hub
+    container_name: myexpo-agent-hub
+    environment:
+      HUB_PORT: 4000
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "4000:4000"
+    volumes:
+      - agent-shared:/shared
+      - ./logs/hub:/logs
+    networks:
+      - myexpo-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["bun", "run", "agent:hub"]
+    profiles:
+      - agents
+
+networks:
+  myexpo-network:
+    external: true
+
+volumes:
+  agent-shared:
+    driver: local

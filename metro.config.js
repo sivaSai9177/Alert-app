@@ -1,15 +1,35 @@
-/** @type {import('expo/metro-config').MetroConfig} */
-const { getDefaultConfig } = require("expo/metro-config");
-const { withNativeWind } = require("nativewind/metro");
+const { getDefaultConfig } = require('expo/metro-config');
+const { withNativeWind } = require('nativewind/metro');
+const path = require('path');
 
-const config = getDefaultConfig(__dirname);
+const projectRoot = __dirname;
+const config = getDefaultConfig(projectRoot);
 
-config.resolver.sourceExts.push("sql");
+// Ensure projectRoot is set
+config.projectRoot = projectRoot;
+config.watchFolders = [projectRoot];
 
-// Add wasm asset support
-config.resolver.assetExts.push("wasm");
+// Add web-specific optimizations
+if (process.env.PLATFORM === 'web') {
+  config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
+}
 
-module.exports = withNativeWind(config, {
-  input: "./app/global.css",
-  configPath: "./tailwind.config.ts",
-});
+// Production optimizations
+if (process.env.NODE_ENV === 'production') {
+  // Enable minification
+  config.transformer.minifierConfig = {
+    keep_fnames: true,
+    mangle: {
+      keep_fnames: true,
+    },
+    compress: {
+      drop_console: true,
+      reduce_funcs: false,
+    },
+  };
+  
+  // Optimize bundle
+  config.transformer.optimizationSizeLimit = 250000; // 250KB
+}
+
+module.exports = withNativeWind(config, { input: './app/global.css' });

@@ -1,42 +1,92 @@
 {
   "expo": {
-    "name": "expo-starter",
-    "slug": "expo-starter",
+    "name": "Full-Stack Expo Starter",
+    "slug": "expo-fullstack-starter",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "expostarter",
+    "scheme": "expo-starter",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.siva9177.expofullstackstarter",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSUserNotificationUsageDescription": "This app uses notifications to keep you updated with important information and alerts."
+      },
+      "associatedDomains": [
+        "applinks:auth.expo.io"
+      ]
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#ffc1cc"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.siva9177.expofullstackstarter"
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
+      "output": "server",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router"
+      ],
+      [
+        "expo-dev-client"
+      ],
       [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#fff0f7"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#FF1493",
+          "sounds": [],
+          "androidMode": "default",
+          "androidCollapsedTitle": "#{unread_notifications} new notifications"
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "allowedOrigins": [
+        "http://192.168.1.104:8081",
+        "http://localhost:8081",
+        "http://192.168.1.104:8081",
+        "http://localhost:8081",
+        "http://192.168.1.104:8081",
+        "http://localhost:8081",
+        "http://192.168.1.104:8081",
+        "http://localhost:8081"
+      ],
+      "router": {},
+      "eas": {
+        "projectId": "f155b026-01bd-4212-94f3-e7aedef2801d"
+      }
+    },
+    "owner": "siva9177",
+    "cli": {
+      "appVersionSource": "remote"
+    },
+    "build": {
+      "development": {
+        "developmentClient": true,
+        "distribution": "internal"
+      }
     }
   }
 }

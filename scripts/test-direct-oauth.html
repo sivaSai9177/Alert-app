@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Direct OAuth Test</title>
+</head>
+<body>
+  <h1>Direct Google OAuth Test</h1>
+  <p>Click the button below to test Google OAuth directly:</p>
+  
+  <button id="oauth-btn" onclick="testOAuth()">Test Google OAuth</button>
+  
+  <h2>Results:</h2>
+  <pre id="results"></pre>
+  
+  <script>
+    const log = (message) => {
+      const results = document.getElementById('results');
+      results.textContent += message + '\n';
+      console.log(message);
+    };
+    
+    async function testOAuth() {
+      log('Starting OAuth test...\n');
+      
+      // Test 1: Check API endpoint
+      try {
+        const apiResponse = await fetch('http://localhost:8081/api/auth');
+        log(`API endpoint status: ${apiResponse.status}`);
+      } catch (error) {
+        log(`API endpoint error: ${error.message}`);
+      }
+      
+      // Test 2: Direct OAuth URLs
+      const oauthUrls = [
+        'http://localhost:8081/api/auth/signin/google',
+        'http://localhost:8081/api/auth/sign-in/provider/google',
+        'http://localhost:8081/api/auth/oauth/google',
+        'http://localhost:8081/api/auth/login/google'
+      ];
+      
+      log('\nTesting OAuth endpoints:');
+      for (const url of oauthUrls) {
+        try {
+          const response = await fetch(url + '?callbackURL=' + encodeURIComponent('http://localhost:8081/auth-callback'), {
+            method: 'GET',
+            redirect: 'manual'
+          });
+          
+          if (response.status === 302 || response.status === 301) {
+            const location = response.headers.get('location');
+            log(`✅ ${url} - Redirects to: ${location?.substring(0, 50)}...`);
+            
+            if (location?.includes('accounts.google.com')) {
+              log('\n🎉 Found working OAuth endpoint!');
+              log(`Full URL: ${url}`);
+              
+              // Open in new window
+              const openBtn = document.createElement('button');
+              openBtn.textContent = 'Open OAuth URL';
+              openBtn.onclick = () => window.open(url + '?callbackURL=' + encodeURIComponent('http://localhost:8081/auth-callback'));
+              document.body.appendChild(openBtn);
+              break;
+            }
+          } else {
+            log(`❌ ${url} - Status: ${response.status}`);
+          }
+        } catch (error) {
+          log(`❌ ${url} - Error: ${error.message}`);
+        }
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+# Development Tools Container
+FROM oven/bun:1.0-alpine
+
+# Install all development tools
+RUN apk add --no-cache \
+    bash \
+    git \
+    curl \
+    wget \
+    jq \
+    postgresql-client \
+    redis \
+    vim \
+    nano \
+    htop \
+    docker-cli \
+    make \
+    g++ \
+    python3 \
+    py3-pip
+
+# Install Node.js for compatibility
+RUN apk add --no-cache nodejs npm
+
+# Install global development tools
+RUN npm install -g \
+    typescript \
+    @types/node \
+    eslint \
+    prettier \
+    nodemon \
+    concurrently \
+    wait-on
+
+# Install database tools
+RUN npm install -g \
+    drizzle-kit \
+    prisma
+
+# Install API testing tools
+RUN npm install -g \
+    @stoplight/prism-cli \
+    newman
+
+WORKDIR /workspace
+
+# Copy package files
+COPY package.json bun.lockb ./
+
+# Install dependencies
+RUN bun install --frozen-lockfile
+
+# Set up helpful aliases
+RUN echo 'alias ll="ls -la"' >> ~/.bashrc && \
+    echo 'alias gs="git status"' >> ~/.bashrc && \
+    echo 'alias gd="git diff"' >> ~/.bashrc && \
+    echo 'alias db="bun run db:studio"' >> ~/.bashrc
+
+# Default shell
+SHELL ["/bin/bash", "-c"]
+
+# Keep container running
+CMD ["tail", "-f", "/dev/null"]

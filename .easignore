@@ -1,0 +1,135 @@
+# .easignore - Files to exclude from EAS builds
+
+# Git
+.git/
+.gitignore
+
+# Environment files (except the ones needed for builds)
+.env
+.env.local
+.env.development
+.env.test
+.env.local.template
+# Keep .env.preview and .env.production for builds
+
+# Documentation
+*.md
+docs/
+README.md
+LICENSE
+LOCAL_ENV_STATUS.md
+ENVIRONMENT_SETUP_QUICKSTART.md
+
+# Scripts (not needed for builds)
+scripts/
+setup-*.sh
+trigger-*.sh
+build-*.sh
+
+# Test files
+__tests__/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+jest.config.js
+jest.setup.js
+jest.react-native-mock.js
+
+# Development tools
+.vscode/
+.idea/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# macOS
+.DS_Store
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+tmp/
+
+# Build artifacts (local)
+dist/
+build/
+.expo/
+web-build/
+
+# Node modules cache
+node_modules/.cache/
+
+# Database
+*.db
+*.sqlite
+drizzle/
+
+# Credentials (local only)
+credentials/
+*.pem
+*.p12
+*.key
+*.mobileprovision
+
+# iOS
+ios/Pods/
+ios/build/
+ios/DerivedData/
+ios/.xcode.env.local
+
+# Android  
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/gradle.properties
+
+# Misc
+.expo-shared/
+.turbo/
+coverage/
+.nyc_output/
+
+# Native directories (managed by EAS Build)
+/android
+/ios
+
+# Large assets not needed for build
+assets/videos/
+assets/raw/
+
+# Python scripts
+*.py
+*.pyc
+__pycache__/
+
+# Shell scripts in root
+*.sh
+
+# EAS specific
+eas-build-*
+
+# Docker files (not needed for mobile builds)
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+docker/
+docker-volumes/
+
+# Environment setup files
+.env.local.example
+.env.development.example
+.env.staging.example
+.env.production.example
+
+# Database migrations (applied during CI/CD)
+drizzle/meta/
+migrations/
+
+# Local development tools
+pgadmin/
+redis-data/
+postgres-data/

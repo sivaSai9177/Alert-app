@@ -5,8 +5,7 @@ import { SymbolWeight, SymbolViewProps } from 'expo-symbols';
 import { ComponentProps } from 'react';
 import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
 
-type IconMapping = Record<SymbolViewProps['name'], ComponentProps<typeof MaterialIcons>['name']>;
-type IconSymbolName = keyof typeof MAPPING;
+export type IconSymbolName = keyof typeof MAPPING;
 
 /**
  * Add your SF Symbols to Material Icons mappings here.
@@ -18,7 +17,24 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
-} as IconMapping;
+  'gearshape.fill': 'settings',
+  'view-compact': 'view-compact',
+  'view-comfortable': 'view-comfortable',
+  'view-agenda': 'view-agenda',
+  'checkmark.circle.fill': 'check-circle',
+  'xmark.circle.fill': 'cancel',
+  'eye.fill': 'visibility',
+  'eye.slash.fill': 'visibility-off',
+  'envelope.fill': 'email',
+  'lock.fill': 'lock',
+  'person.fill': 'person',
+  'building.fill': 'business',
+  'building.2.fill': 'domain',
+  'lock.shield.fill': 'enhanced-encryption',
+  'phone.fill': 'phone',
+  'briefcase.fill': 'work',
+  'doc.text.fill': 'description',
+} as const;
 
 /**
  * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.

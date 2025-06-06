@@ -1,0 +1,99 @@
+{
+  "cli": {
+    "version": ">= 3.13.3",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "credentialsSource": "local"
+      },
+      "ios": {
+        "simulator": true,
+        "credentialsSource": "remote"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENVIRONMENT": "development",
+        "EXPO_PUBLIC_DEBUG_MODE": "true",
+        "EXPO_PUBLIC_API_FALLBACK_ENABLED": "true",
+        "EXPO_PUBLIC_API_URL": "http://localhost:8081",
+        "EXPO_PUBLIC_API_URL_LOCAL": "http://localhost:8081",
+        "EXPO_PUBLIC_API_URL_NGROK": "https://placeholder.ngrok.io",
+        "EXPO_PUBLIC_API_URL_PRODUCTION": "https://api.myexpo.com"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "buildConfiguration": "Release",
+        "resourceClass": "medium",
+        "simulator": true
+      },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENVIRONMENT": "preview",
+        "EXPO_PUBLIC_DEBUG_MODE": "false",
+        "EXPO_PUBLIC_API_FALLBACK_ENABLED": "true",
+        "EXPO_PUBLIC_API_URL": "http://localhost:8081",
+        "EXPO_PUBLIC_API_URL_LOCAL": "http://localhost:8081",
+        "EXPO_PUBLIC_API_URL_NGROK": "https://placeholder.ngrok.io",
+        "EXPO_PUBLIC_API_URL_PRODUCTION": "https://api.myexpo.com"
+      }
+    },
+    "production": {
+      "ios": {
+        "buildConfiguration": "Release",
+        "resourceClass": "medium"
+      },
+      "android": {
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENVIRONMENT": "production",
+        "EXPO_PUBLIC_DEBUG_MODE": "false",
+        "EXPO_PUBLIC_API_FALLBACK_ENABLED": "false",
+        "EXPO_PUBLIC_API_URL": "https://api.myexpo.com",
+        "EXPO_PUBLIC_API_URL_PRODUCTION": "https://api.myexpo.com",
+        "NODE_ENV": "production"
+      }
+    },
+    "staging": {
+      "extends": "preview",
+      "env": {
+        "EXPO_PUBLIC_ENVIRONMENT": "staging",
+        "EXPO_PUBLIC_DEBUG_MODE": "false",
+        "EXPO_PUBLIC_API_FALLBACK_ENABLED": "true",
+        "EXPO_PUBLIC_API_URL": "https://staging-api.myexpo.com",
+        "EXPO_PUBLIC_API_URL_LOCAL": "http://localhost:8081",
+        "EXPO_PUBLIC_API_URL_NGROK": "https://placeholder.ngrok.io",
+        "EXPO_PUBLIC_API_URL_PRODUCTION": "https://staging-api.myexpo.com"
+      }
+    },
+    "local-ngrok": {
+      "extends": "development",
+      "env": {
+        "EXPO_PUBLIC_ENVIRONMENT": "local",
+        "EXPO_PUBLIC_DEBUG_MODE": "true",
+        "EXPO_PUBLIC_API_FALLBACK_ENABLED": "true",
+        "EXPO_PUBLIC_API_URL": "https://0dd6-49-207-236-32.ngrok-free.app",
+        "EXPO_PUBLIC_API_URL_LOCAL": "http://localhost:8081",
+        "EXPO_PUBLIC_API_URL_NGROK": "https://0dd6-49-207-236-32.ngrok-free.app",
+        "GOOGLE_CLIENT_ID": "59100460814-lvqieq6hjuhvhe0t3gue41cpbp499kr4.apps.googleusercontent.com",
+        "GOOGLE_CLIENT_SECRET": "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",
+        "BETTER_AUTH_SECRET": "BoworVUCWLUtLNgxSCJYu3xGTtJL0yc2",
+        "BETTER_AUTH_BASE_URL": "https://0dd6-49-207-236-32.ngrok-free.app/api/auth",
+        "DATABASE_URL": "postgresql://neondb_owner:npg_PHn3mgkdfFO2@ep-weathered-bonus-a1bdvd8c-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

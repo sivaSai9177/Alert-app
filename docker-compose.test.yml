@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  # Test Database (separate from development)
+  test-postgres:
+    image: postgres:16-alpine
+    container_name: myexpo-test-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-myexpo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-myexpo123}
+      POSTGRES_DB: ${POSTGRES_TEST_DB:-myexpo_test}
+    ports:
+      - "5433:5432"
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myexpo}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - myexpo-test-network
+
+  # Test Runner Container
+  test-runner:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.test
+    container_name: myexpo-test-runner
+    environment:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://${POSTGRES_USER:-myexpo}:${POSTGRES_PASSWORD:-myexpo123}@test-postgres:5432/${POSTGRES_TEST_DB:-myexpo_test}
+      REDIS_URL: redis://test-redis:6379
+      CI: true
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - test-results:/app/test-results
+      - coverage:/app/coverage
+    depends_on:
+      test-postgres:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+    networks:
+      - myexpo-test-network
+    command: ["bun", "test"]
+
+  # Test Redis
+  test-redis:
+    image: redis:7-alpine
+    container_name: myexpo-test-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - myexpo-test-network
+
+  # E2E Test Runner
+  e2e-runner:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.e2e
+    container_name: myexpo-e2e-runner
+    environment:
+      EXPO_PUBLIC_API_URL: http://api:3000
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - e2e-results:/app/e2e-results
+      - playwright-cache:/ms-playwright
+    networks:
+      - myexpo-test-network
+    profiles:
+      - e2e
+    command: ["bunx", "playwright", "test"]
+
+  # Performance Test Runner
+  perf-runner:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.perf
+    container_name: myexpo-perf-runner
+    environment:
+      API_URL: http://api:3000
+      K6_OUT: json=/results/performance.json
+    volumes:
+      - ./tests/performance:/scripts
+      - perf-results:/results
+    networks:
+      - myexpo-test-network
+    profiles:
+      - performance
+    command: ["run", "/scripts/load-test.js"]
+
+networks:
+  myexpo-test-network:
+    driver: bridge
+
+volumes:
+  test_postgres_data:
+  test-results:
+  coverage:
+  e2e-results:
+  playwright-cache:
+  perf-results:

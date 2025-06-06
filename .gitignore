@@ -18,6 +18,10 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# iOS and Android build directories (Expo generates these)
+ios/
+android/
+
 # Metro
 .metro-health-check*
 
@@ -26,13 +30,69 @@ npm-debug.*
 yarn-debug.*
 yarn-error.*
 
+# Log files (may contain sensitive information)
+*.log
+
 # macOS
 .DS_Store
 *.pem
 
 # local env files
 .env*.local
+.env
+.env.local
+.env.development
+.env.staging
+.env.production
+.env.preview
 
 # typescript
 *.tsbuildinfo
 app-example
+
+# Local credentials
+credentials/
+credentials.json
+*.jks
+*.p12
+*.mobileprovision
+
+# Docker volumes and data
+docker-volumes/
+postgres-data/
+redis-data/
+
+# Local development
+LOCAL_ENV_STATUS.md
+.vscode/
+.idea/
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Build artifacts
+build/
+out/
+.next/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# OS files
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+*.sublime-*
+*.code-workspace
