@@ -1,0 +1,257 @@
+/**
+ * Server-safe Better Auth configuration
+ * This file is used for API routes and server-side code
+ * No React Native or browser dependencies
+ */
+
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { oAuthProxy, multiSession, organization, admin } from "better-auth/plugins";
+import { db } from "@/src/db";
+import * as schema from "@/src/db/schema";
+
+// Server-safe logger (no React Native dependencies)
+const log = {
+  auth: {
+    info: (message: string, data?: any) => {
+      if (process.env.NODE_ENV === 'development') {
+      }
+    },
+    debug: (message: string, data?: any) => {
+      if (process.env.NODE_ENV === 'development') {
+      }
+    },
+    error: (message: string, error?: any) => console.error(`[AUTH ERROR] ${message}`, error),
+  },
+};
+
+// Server-safe base URL configuration
+const getBaseURL = () => {
+  if (process.env.BETTER_AUTH_BASE_URL) {
+    return process.env.BETTER_AUTH_BASE_URL;
+  }
+  return 'http://localhost:8081/api/auth';
+};
+
+const getTrustedOrigins = () => {
+  const origins = [
+    "http://localhost:8081",
+    "http://localhost:8082",
+    "http://localhost:3000",
+    "http://127.0.0.1:8081",
+    "http://127.0.0.1:8082",
+    "http://127.0.0.1:3000",
+  ];
+  
+  if (process.env.NODE_ENV === "development") {
+    origins.push(
+      "https://*.exp.direct",
+      "https://*.exp.host",
+      "https://*.expo.dev",
+      "https://*.expo.io"
+    );
+    
+    const localIP = process.env.LOCAL_IP || "192.168.1.101";
+    origins.push(
+      `http://${localIP}:8081`,
+      `http://${localIP}:8082`,
+      `http://${localIP}:3000`,
+      `http://${localIP}:19000`,
+      `http://${localIP}:19001`,
+      `http://${localIP}:19002`
+    );
+  }
+
+  return origins;
+};
+
+// Debug environment variables on load
+if (process.env.NODE_ENV === 'development') {
+  log.auth.debug("[AUTH SERVER] Environment variables", {
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? `${process.env.GOOGLE_CLIENT_ID.substring(0, 10)}...` : 'NOT SET',
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT SET',
+    BETTER_AUTH_BASE_URL: process.env.BETTER_AUTH_BASE_URL || 'NOT SET',
+    DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT SET',
+  });
+}
+
+export const auth = betterAuth({
+  baseURL: getBaseURL(),
+  secret: process.env.BETTER_AUTH_SECRET || "your-secret-key-change-in-production",
+  
+  // Disable CSRF in development for tunnel URLs
+  ...(process.env.NODE_ENV === "development" && {
+    disableCsrf: true,
+  }),
+  
+  socialProviders: {
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && {
+      google: {
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        scope: ["openid", "email", "profile"],
+      },
+    }),
+  },
+  
+  user: {
+    additionalFields: {
+      role: {
+        type: "string",
+        required: false,
+        defaultValue: null,
+      },
+      organizationId: {
+        type: "string",
+        required: false,
+      },
+      needsProfileCompletion: {
+        type: "boolean",
+        required: true,
+        defaultValue: true,
+      },
+    },
+  },
+  
+  emailAndPassword: {
+    enabled: true,
+    requireEmailVerification: false,
+    sendResetPassword: async ({ user, url }) => {
+      log.auth.info(`Password reset link generated`, { email: user.email, url });
+    },
+  },
+  
+  database: drizzleAdapter(db, {
+    provider: "pg",
+    schema: { ...schema },
+  }),
+  
+  session: {
+    expiresIn: 60 * 60 * 24 * 7, // 7 days
+    updateAge: 60 * 60 * 24, // 1 day
+    cookieCache: {
+      enabled: true,
+    },
+  },
+  
+  cookies: {
+    sessionToken: {
+      name: "better-auth.session-token",
+      httpOnly: false,
+      sameSite: "lax",
+      secure: false,
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    },
+    state: {
+      name: "better-auth.state",
+      httpOnly: false,
+      sameSite: "lax",
+      secure: false,
+      path: "/",
+      maxAge: 60 * 10,
+    },
+  },
+  
+  plugins: [
+    // Note: expo() plugin removed as it causes server-side issues
+    oAuthProxy(),
+    multiSession({ maximumSessions: 5 }),
+    organization({
+      allowUserToCreateOrganization: true,
+      membershipLimits: {
+        'free': 5,
+        'pro': 50,
+        'enterprise': -1,
+      }
+    }),
+    admin({
+      defaultRole: 'user',
+      adminUserIds: process.env.ADMIN_USER_IDS?.split(',') || []
+    })
+  ],
+  
+  // Use static array to avoid the async function issue
+  trustedOrigins: getTrustedOrigins(),
+  
+  cors: {
+    origin: (origin: string) => {
+      const staticOrigins = getTrustedOrigins();
+      if (staticOrigins.includes(origin)) {
+        return true;
+      }
+      
+      const tunnelPatterns = [
+        /^https:\/\/[\w-]+\.exp\.direct$/,
+        /^https:\/\/[\w-]+\.exp\.host$/,
+        /^https:\/\/[\w-]+\.expo\.dev$/,
+        /^https:\/\/[\w-]+\.expo\.io$/,
+      ];
+      
+      return tunnelPatterns.some(pattern => pattern.test(origin));
+    },
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  },
+  
+  rateLimit: {
+    window: 15 * 60,
+    max: process.env.NODE_ENV === "production" ? 100 : 1000,
+    storage: "memory",
+  },
+  
+  logger: {
+    level: process.env.NODE_ENV === "production" ? "error" : "debug",
+    disabled: false,
+  },
+  
+  onError: (error: any) => {
+    log.auth.error("[AUTH ERROR]", error);
+    
+    if (process.env.NODE_ENV === "production") {
+      return {
+        message: "An error occurred during authentication",
+        status: 500,
+      };
+    }
+    
+    return {
+      message: error.message,
+      status: error.status || 500,
+    };
+  },
+  
+  callbacks: {
+    signIn: {
+      async before({ user, isNewUser }) {
+        log.auth.debug("[AUTH CALLBACK] Sign in before", { 
+          userId: user?.id, 
+          isNewUser,
+        });
+        
+        if (isNewUser) {
+          user.role = 'guest';
+          user.needsProfileCompletion = true;
+        }
+      },
+      async after({ user, session, request }) {
+        log.auth.info("[AUTH CALLBACK] Sign in after", { userId: user?.id, sessionId: session?.id });
+        
+        const userAgent = request.headers.get('user-agent') || '';
+        const isMobileOAuth = userAgent.includes('Expo') || userAgent.includes('okhttp');
+        
+        if (isMobileOAuth && session) {
+          return {
+            redirect: true,
+            url: `/api/auth/mobile-oauth-success?token=${session.token}`,
+          };
+        }
+        
+        return { user, session };
+      },
+    },
+  },
+});
+
+export type Auth = typeof auth;

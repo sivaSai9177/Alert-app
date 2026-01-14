@@ -1,0 +1,50 @@
+# API Server Dockerfile
+FROM oven/bun:1.0-alpine AS base
+
+# Install dependencies
+RUN apk add --no-cache \
+    postgresql-client \
+    bash \
+    git
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json bun.lockb ./
+
+# Install dependencies
+RUN bun install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Development stage
+FROM base AS development
+ENV NODE_ENV=development
+EXPOSE 3000
+CMD ["bun", "run", "dev:api"]
+
+# Build stage
+FROM base AS builder
+ENV NODE_ENV=production
+RUN bun run build:api
+
+# Production stage
+FROM oven/bun:1.0-alpine AS production
+RUN apk add --no-cache postgresql-client
+WORKDIR /app
+
+# Copy built application
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/drizzle ./drizzle
+
+ENV NODE_ENV=production
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
+
+CMD ["bun", "run", "start:api"]

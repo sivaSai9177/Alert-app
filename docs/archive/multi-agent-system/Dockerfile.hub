@@ -1,0 +1,39 @@
+# Agent Communication Hub Dockerfile
+FROM oven/bun:1.0-alpine
+
+# Install dependencies
+RUN apk add --no-cache \
+    bash \
+    redis \
+    curl
+
+WORKDIR /app
+
+# Create hub directories
+RUN mkdir -p \
+    /shared \
+    /logs \
+    /app/src
+
+# Copy package files
+COPY package.json bun.lockb ./
+
+# Install minimal dependencies for hub
+RUN bun add \
+    redis \
+    ws \
+    express \
+    winston
+
+# Copy hub implementation (to be created)
+COPY scripts/agent-hub /app/src
+
+# Expose hub port
+EXPOSE 4000
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
+    CMD curl -f http://localhost:4000/health || exit 1
+
+# Start the hub
+CMD ["bun", "run", "/app/src/index.ts"]

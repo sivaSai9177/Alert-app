@@ -1,0 +1,56 @@
+# Multi-Agent System Dockerfile
+FROM oven/bun:1.0-alpine
+
+ARG AGENT_TYPE=manager
+
+# Install dependencies based on agent type
+RUN apk add --no-cache \
+    bash \
+    git \
+    postgresql-client \
+    redis \
+    curl \
+    jq
+
+# Install additional tools for specific agents
+RUN if [ "$AGENT_TYPE" = "frontend" ]; then \
+        apk add --no-cache chromium; \
+    fi
+
+WORKDIR /workspace
+
+# Install bun globally
+RUN bun --version
+
+# Create agent-specific directories
+RUN mkdir -p \
+    /shared \
+    /logs \
+    /workspace \
+    /agent-context
+
+# Copy package files
+COPY package.json bun.lockb ./
+
+# Install dependencies
+RUN bun install --frozen-lockfile
+
+# Copy agent scripts
+COPY scripts/agents /agent-scripts
+
+# Copy agent context
+COPY docs/multi-agent/AGENT_CONTEXT.md /agent-context/
+COPY docs/multi-agent/ENHANCED_AGENT_PROMPTS_V2.md /agent-context/
+
+# Set agent type
+ENV AGENT_TYPE=$AGENT_TYPE
+
+# Agent-specific configurations
+RUN echo "Configuring $AGENT_TYPE agent..."
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+    CMD echo "Agent $AGENT_TYPE is healthy"
+
+# Default command (can be overridden)
+CMD ["sh", "-c", "echo 'Starting $AGENT_TYPE agent...' && tail -f /dev/null"]

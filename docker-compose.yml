@@ -1,0 +1,153 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: myexpo-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-myexpo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-myexpo123}
+      POSTGRES_DB: ${POSTGRES_DB:-myexpo_dev}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myexpo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - myexpo-network
+
+  # Redis for caching and queues
+  redis:
+    image: redis:7-alpine
+    container_name: myexpo-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - myexpo-network
+
+  # pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: myexpo-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@myexpo.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - myexpo-network
+    profiles:
+      - tools
+
+  # Mailhog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: myexpo-mailhog
+    ports:
+      - "${MAILHOG_SMTP_PORT:-1025}:1025"
+      - "${MAILHOG_UI_PORT:-8025}:8025"
+    networks:
+      - myexpo-network
+    profiles:
+      - tools
+
+  # API Server (tRPC + Better Auth)
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+      args:
+        NODE_VERSION: 20
+    container_name: myexpo-api
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-myexpo}:${POSTGRES_PASSWORD:-myexpo123}@postgres:5432/${POSTGRES_DB:-myexpo_dev}
+      REDIS_URL: redis://redis:6379
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+    ports:
+      - "${API_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src
+      - ./lib:/app/lib
+      - ./drizzle:/app/drizzle
+      - ./.env.local:/app/.env.local
+    command: ["bun", "run", "dev:api"]
+    networks:
+      - myexpo-network
+    profiles:
+      - development
+
+  # Expo Development Server
+  expo:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.expo
+    container_name: myexpo-expo
+    environment:
+      EXPO_PUBLIC_API_URL: ${EXPO_PUBLIC_API_URL:-http://localhost:3000}
+      EXPO_DEVTOOLS_LISTEN_ADDRESS: 0.0.0.0
+      REACT_NATIVE_PACKAGER_HOSTNAME: ${REACT_NATIVE_PACKAGER_HOSTNAME:-localhost}
+    ports:
+      - "${EXPO_PORT:-8081}:8081"
+      - "19000:19000"
+      - "19001:19001"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.expo
+    depends_on:
+      - api
+    command: ["bun", "run", "start"]
+    networks:
+      - myexpo-network
+    profiles:
+      - development
+
+  # Development Tools Container
+  devtools:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.devtools
+    container_name: myexpo-devtools
+    volumes:
+      - .:/workspace
+      - /workspace/node_modules
+    networks:
+      - myexpo-network
+    profiles:
+      - tools
+    command: ["tail", "-f", "/dev/null"]
+
+networks:
+  myexpo-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

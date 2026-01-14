@@ -1,6 +1,9 @@
 import { SymbolView, SymbolViewProps, SymbolWeight } from 'expo-symbols';
 import { StyleProp, ViewStyle } from 'react-native';
 
+// Export the same type as the fallback version for consistency
+export type IconSymbolName = SymbolViewProps['name'];
+
 export function IconSymbol({
   name,
   size = 24,

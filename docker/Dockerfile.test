@@ -1,0 +1,39 @@
+# Test Runner Dockerfile
+FROM oven/bun:1.0-alpine
+
+# Install test dependencies
+RUN apk add --no-cache \
+    bash \
+    git \
+    postgresql-client \
+    chromium \
+    chromium-chromedriver
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json bun.lockb ./
+
+# Install dependencies including dev dependencies
+RUN bun install --frozen-lockfile
+
+# Copy test configuration
+COPY jest.config.js ./
+COPY tsconfig.json ./
+COPY .eslintrc.js ./
+
+# Copy source and test files
+COPY . .
+
+# Create test directories
+RUN mkdir -p \
+    test-results \
+    coverage \
+    .jest
+
+# Environment for testing
+ENV NODE_ENV=test
+ENV CI=true
+
+# Run tests by default
+CMD ["bun", "test", "--coverage"]

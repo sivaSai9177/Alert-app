@@ -1,0 +1,2 @@
+// Backup of original auth handler
+import { auth } from "@/lib/auth/auth-server";
